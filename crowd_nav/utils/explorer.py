@@ -52,18 +52,18 @@ class Explorer(object):
                 actions.append(action)
                 rewards.append(reward)
 
-                if isinstance(info, Discomfort):
+                if isinstance(info['event'], Discomfort):
                     discomfort += 1
-                    min_dist.append(info.min_dist)
+                    min_dist.append(info['event'].min_dist)
 
-            if isinstance(info, ReachGoal):
+            if isinstance(info['event'], ReachGoal):
                 success += 1
                 success_times.append(self.env.global_time)
-            elif isinstance(info, Collision):
+            elif isinstance(info['event'], Collision):
                 collision += 1
                 collision_cases.append(i)
                 collision_times.append(self.env.global_time)
-            elif isinstance(info, Timeout):
+            elif isinstance(info['event'], Timeout):
                 timeout += 1
                 timeout_cases.append(i)
                 timeout_times.append(self.env.time_limit)
@@ -71,7 +71,7 @@ class Explorer(object):
                 raise ValueError('Invalid end signal from environment')
 
             if update_memory:
-                if isinstance(info, ReachGoal) or isinstance(info, Collision):
+                if isinstance(info['event'], ReachGoal) or isinstance(info['event'], Collision):
                     # only add positive(success) or negative(collision) experience in experience set
                     self.update_memory(states, actions, rewards, imitation_learning)
 
