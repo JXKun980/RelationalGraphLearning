@@ -140,14 +140,8 @@ class CrowdSim(gym.Env):
                     py_noise = (np.random.random() - 0.5) * human.v_pref
                     px = self.circle_radius * np.cos(angle) + px_noise
                     py = self.circle_radius * np.sin(angle) + py_noise
-                    collide = False
-                    for agent in [self.robot] + self.humans:
-                        min_dist = human.radius + agent.radius + self.discomfort_dist
-                        if norm((px - agent.px, py - agent.py)) < min_dist or \
-                                norm((px - agent.gx, py - agent.gy)) < min_dist:
-                            collide = True
-                            break
-                    if not collide:
+                    safe = self.is_safe_agent_spawn(px, py, human.radius) and self.is_safe_goal_spawn(-px, -py, human.radius)
+                    if safe:
                         break
                 human.set(px, py, -px, -py, 0, 0, 0)
                 self.humans.append(human)
@@ -166,27 +160,19 @@ class CrowdSim(gym.Env):
                 while True:
                     px = np.random.random() * self.square_width * 0.5 * sign
                     py = (np.random.random() - 0.5) * self.square_width
-                    collide = False
-                    for agent in [self.robot] + self.humans:
-                        if norm((px - agent.px, py - agent.py)) < human.radius + agent.radius + self.discomfort_dist:
-                            collide = True
-                            break
-                    if not collide:
+                    safe = self.is_safe_agent_spawn(px, py, human.radius)
+                    if safe:
                         break
                 while True:
                     gx = np.random.random() * self.square_width * 0.5 * - sign
                     gy = (np.random.random() - 0.5) * self.square_width
-                    collide = False
-                    for agent in [self.robot] + self.humans:
-                        if norm((gx - agent.gx, gy - agent.gy)) < human.radius + agent.radius + self.discomfort_dist:
-                            collide = True
-                            break
-                    if not collide:
+                    safe = self.is_safe_goal_spawn(gx, gy, human.radius)
+                    if safe:
                         break
                 human.set(px, py, gx, gy, 0, 0, 0)
                 self.humans.append(human)
 
-        elif scenario == 'passing':
+        elif scenario == '2_agents_passing':
             # Robot
             self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
             # Human
@@ -195,8 +181,79 @@ class CrowdSim(gym.Env):
             human.set(0, self.circle_radius, 0, -self.circle_radius, 0, 0, 0)
             self.humans = [human]
 
+        elif scenario == 'same_direction':
+            # Robot
+            self.robot.set(0, -4, 0, 4, 0, 0, np.pi / 2)
+            # Human
+            self.humans = []
+            for _ in range(human_num):
+                human = self.generate_human()
+                human.v_pref = 0.5
+                while True:
+                    px = np.random.random() * (0.9 * self.panel_width) - 0.5 * self.panel_width
+                    py = np.random.random() * (-0.5 * self.panel_height)
+                    gx = px
+                    gy = self.panel_height
+                    safe = self.is_safe_agent_spawn(px, py, human.radius) and self.is_safe_goal_spawn(gx, gy, human.radius)
+                    if safe:
+                        break
+                human.set(px, py, gx, gy, 0, 0, 0)
+                self.humans.append(human)
+        
+        elif scenario == 'opposite_direction':
+            # Robot
+            self.robot.set(0, -8, 0, 8, 0, 0, np.pi / 2)
+            # Human
+            self.humans = []
+            for _ in range(human_num):
+                human = self.generate_human()
+                while True:
+                    px = np.random.random() * (0.9 * self.panel_width) - 0.5 * self.panel_width
+                    py = np.random.random() * (0.5 * self.panel_height)
+                    gx = px
+                    gy = - self.panel_height
+                    safe = self.is_safe_agent_spawn(px, py, human.radius) and self.is_safe_goal_spawn(gx, gy, human.radius)
+                    if safe:
+                        break
+                human.set(px, py, gx, gy, 0, 0, 0)
+                self.humans.append(human)
+
+        elif scenario == 'perpendicular_direction':
+            # Robot
+            self.robot.set(0, -4, 0, 4, 0, 0, np.pi / 2)
+            # Human
+            self.humans = []
+            for _ in range(human_num):
+                human = self.generate_human()
+                while True:
+                    px = np.random.random() * (-0.5 * self.panel_width)
+                    py = np.random.random() * (0.9 * self.panel_height) - (0.5 * self.panel_height)
+                    gx = self.panel_width
+                    gy = py
+                    safe = self.is_safe_agent_spawn(px, py, human.radius) and self.is_safe_goal_spawn(gx, gy, human.radius)
+                    if safe:
+                        break
+                human.set(px, py, gx, gy, 0, 0, 0)
+                self.humans.append(human)
+
         else:
             raise Exception('Unknown scenario passed in')
+    
+    def is_safe_agent_spawn(self, px, py, radius):
+        safe = True
+        for agent in [self.robot] + self.humans:
+            if norm((px - agent.px, py - agent.py)) < radius + agent.radius + self.discomfort_dist:
+                safe = False
+                break
+        return safe
+
+    def is_safe_goal_spawn(self, gx, gy, radius):
+        safe = True
+        for agent in [self.robot] + self.humans:
+            if norm((gx - agent.gx, gy - agent.gy)) < radius + agent.radius + self.discomfort_dist:
+                safe = False
+                break
+        return safe
 
     def reset(self, phase='test', test_case=None):
         """
