@@ -9,9 +9,8 @@ class EnvConfig(BaseEnvConfig):
 class PolicyConfig(BasePolicyConfig):
     def __init__(self, debug=False):
         super(PolicyConfig, self).__init__(debug)
-        self.name = 'lstm_rl'
+        self.name = 'cadrl'
         self.action_space.query_env = True
-
 
 
 class TrainConfig(BaseTrainConfig):

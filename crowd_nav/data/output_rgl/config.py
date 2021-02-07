@@ -4,6 +4,8 @@ from configs.icra_benchmark.config import BaseEnvConfig, BasePolicyConfig, BaseT
 class EnvConfig(BaseEnvConfig):
     def __init__(self, debug=False):
         super(EnvConfig, self).__init__(debug)
+        self.robot.visible = True
+        self.env.randomize_attributes = True
 
 
 class PolicyConfig(BasePolicyConfig):

@@ -125,7 +125,7 @@ class CrowdSim(gym.Env):
             human.sample_random_attributes()
         return human
 
-    def generate_scenario(self, scenario, human_num):
+    def generate_scenario(self, scenario, human_num, test_case=None):
         if scenario == 'circle_crossing':
             # Robot
             self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
@@ -178,47 +178,81 @@ class CrowdSim(gym.Env):
             # Human
             self.human_num = 1
             human = self.generate_human()
-            human.set(0, self.circle_radius, 0, -self.circle_radius, 0, 0, 0)
+
+            min_x = - (self.robot.radius + human.radius)
+            max_x = self.robot.radius + human.radius
+            max_num_cases = 10
+
+            if test_case is not None:
+                human_x = test_case % 10 * (max_x - min_x) / 10 + min_x
+            else:
+                human_x = np.random.random() * (max_x - min_x) + min_x
+
+            human.set(human_x, self.circle_radius, human_x, -self.circle_radius, 0, 0, 0)
             self.humans = [human]
 
-        elif scenario == 'same_direction':
+        elif scenario == '2_agents_overtaking':
+            # Robot
+            self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
+            # Human
+            self.human_num = 1
+            human = self.generate_human()
+
+            min_x = - (self.robot.radius + human.radius)
+            max_x = self.robot.radius + human.radius
+            max_num_cases = 10
+
+            if test_case is not None:
+                human_x = test_case % 10 * (max_x - min_x) / 10 + min_x
+            else:
+                human_x = np.random.random() * (max_x - min_x) + min_x
+
+            human.set(human_x, -self.circle_radius+2, human_x, self.circle_radius+2, 0, 0, 0)
+            self.humans = [human]
+
+        elif scenario == '2_agents_crossing':
+            # Robot
+            self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
+            # Human
+            self.human_num = 1
+            human = self.generate_human()
+
+            min_x = -(self.circle_radius + self.robot.radius + human.radius)
+            max_x = -(self.circle_radius - self.robot.radius - human.radius)
+            max_num_cases = 10
+
+            if test_case is not None:
+                human_x = test_case % 10 * (max_x - min_x) / 10 + min_x
+            else:
+                human_x = np.random.random() * (max_x - min_x) + min_x
+
+            human.set(human_x, -self.circle_radius+2, human_x, self.circle_radius+2, 0, 0, 0)
+            self.humans = [human]
+
+        elif scenario == 'parallel_traffic':
             # Robot
             self.robot.set(0, -4, 0, 4, 0, 0, np.pi / 2)
             # Human
             self.humans = []
             for _ in range(human_num):
                 human = self.generate_human()
-                human.v_pref = 0.5
+                human.v_pref = 0.01
                 while True:
-                    px = np.random.random() * (0.9 * self.panel_width) - 0.5 * self.panel_width
-                    py = np.random.random() * (-0.5 * self.panel_height)
+                    px = (np.random.random() - 0.5) * (0.4 * self.panel_width)
+                    if np.random.random() >= 0.5: # Sign determine if the traffic is oppsite or on the same direction
+                        sign = 1
+                    else:
+                        sign = -1
+                    py = np.random.random() * (0.4 * self.panel_height) * sign
                     gx = px
-                    gy = self.panel_height
-                    safe = self.is_safe_agent_spawn(px, py, human.radius) and self.is_safe_goal_spawn(gx, gy, human.radius)
-                    if safe:
-                        break
-                human.set(px, py, gx, gy, 0, 0, 0)
-                self.humans.append(human)
-        
-        elif scenario == 'opposite_direction':
-            # Robot
-            self.robot.set(0, -8, 0, 8, 0, 0, np.pi / 2)
-            # Human
-            self.humans = []
-            for _ in range(human_num):
-                human = self.generate_human()
-                while True:
-                    px = np.random.random() * (0.9 * self.panel_width) - 0.5 * self.panel_width
-                    py = np.random.random() * (0.5 * self.panel_height)
-                    gx = px
-                    gy = - self.panel_height
+                    gy = np.random.random() * (0.4 * self.panel_height) * -sign
                     safe = self.is_safe_agent_spawn(px, py, human.radius) and self.is_safe_goal_spawn(gx, gy, human.radius)
                     if safe:
                         break
                 human.set(px, py, gx, gy, 0, 0, 0)
                 self.humans.append(human)
 
-        elif scenario == 'perpendicular_direction':
+        elif scenario == 'perpendicular_traffic':
             # Robot
             self.robot.set(0, -4, 0, 4, 0, 0, np.pi / 2)
             # Human
@@ -235,6 +269,10 @@ class CrowdSim(gym.Env):
                         break
                 human.set(px, py, gx, gy, 0, 0, 0)
                 self.humans.append(human)
+
+        elif scenario == 'group cutting':
+            raise NotImplementedError()
+
 
         else:
             raise Exception('Unknown scenario passed in')
@@ -286,7 +324,7 @@ class CrowdSim(gym.Env):
                 self.test_scenario = 'circle_crossing'
 
             # Generate scenarios based on simulation config
-            self.generate_scenario(self.test_scenario, self.human_num)
+            self.generate_scenario(self.test_scenario, self.human_num, test_case)
 
             # case_counter is always between 0 and case_size[phase]
             self.case_counter[phase] = (self.case_counter[phase] + 1) % self.case_size[phase]
