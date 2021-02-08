@@ -4,8 +4,6 @@ from configs.icra_benchmark.config import BaseEnvConfig, BasePolicyConfig, BaseT
 class EnvConfig(BaseEnvConfig):
     def __init__(self, debug=False):
         super(EnvConfig, self).__init__(debug)
-        self.env.randomize_attributes = True
-        self.sim.train_val_scenario = 'randomized'
 
 class PolicyConfig(BasePolicyConfig):
     def __init__(self, debug=False):

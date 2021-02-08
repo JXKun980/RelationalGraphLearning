@@ -126,6 +126,9 @@ class CrowdSim(gym.Env):
         return human
 
     def generate_scenario(self, scenario, human_num, test_case=None):
+        if scenario == 'randomized':
+            scenario = random.choice(['circle_crossing', 'square_crossing', 'parallel_traffic', 'perpendicular_traffic'])
+            
         if scenario == 'circle_crossing':
             # Robot
             self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
@@ -236,7 +239,6 @@ class CrowdSim(gym.Env):
             self.humans = []
             for _ in range(human_num):
                 human = self.generate_human()
-                human.v_pref = 0.01
                 while True:
                     px = (np.random.random() - 0.5) * (0.4 * self.panel_width)
                     if np.random.random() >= 0.5: # Sign determine if the traffic is oppsite or on the same direction
@@ -378,7 +380,6 @@ class CrowdSim(gym.Env):
         """
         Compute actions for all agents, detect collision, update environment and return (ob, reward, done, info)
         """
-
         # get human actions
         if self.centralized_planning:
             agent_states = [human.get_full_state() for human in self.humans]

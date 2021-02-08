@@ -132,7 +132,10 @@ def main(args):
     if args.resume:
         if not os.path.exists(rl_weight_file):
             logging.error('RL weights does not exist')
-        model.load_state_dict(torch.load(rl_weight_file))
+        if policy_config.name == 'model_predictive_rl':
+            policy.load_model(rl_weight_file)
+        else:
+            model.load_state_dict(torch.load(rl_weight_file))
         rl_weight_file = os.path.join(args.output_dir, 'resumed_rl_model.pth')
         logging.info('Load reinforcement learning trained weights. Resume training')
     elif os.path.exists(il_weight_file):

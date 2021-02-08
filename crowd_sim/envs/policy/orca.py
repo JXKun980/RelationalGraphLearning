@@ -140,7 +140,7 @@ class CentralizedORCA(ORCA):
             self.sim = rvo2.PyRVOSimulator(self.time_step, *params, self.radius, self.max_speed)
             for agent_state in state:
                 self.sim.addAgent(agent_state.position, *params, agent_state.radius + 0.01 + self.safety_space,
-                                  self.max_speed, agent_state.velocity)
+                                  agent_state.v_pref, agent_state.velocity)
         else:
             for i, agent_state in enumerate(state):
                 self.sim.setAgentPosition(i, agent_state.position)
