@@ -84,7 +84,7 @@ class CrowdSim(gym.Env):
         # Evaluation
         self.infos = None
         self.last_acceleration = (0,0)
-        self.min_personal_space = 1.2
+        self.min_personal_space = 0.2
 
     def configure(self, config):
         self.config = config

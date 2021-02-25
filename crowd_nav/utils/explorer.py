@@ -143,9 +143,10 @@ class Explorer(object):
             logging.info('Collision cases: ' + ' '.join([str(x) for x in collision_cases]))
             logging.info('Timeout cases: ' + ' '.join([str(x) for x in timeout_cases]))
 
-        self.statistics = success_rate, collision_rate, avg_nav_time, average(cumulative_rewards), average(average_returns)
+        self.statistics = (success_rate, collision_rate, avg_nav_time, average(cumulative_rewards), average(average_returns), \
+            global_max_speed, global_social_violation_cnt, global_personal_violation_cnt, global_jerk_cost, global_aggregated_time)
 
-        return self.statistics, global_max_speed, global_social_violation_cnt, global_personal_violation_cnt, global_jerk_cost, global_aggregated_time
+        return self.statistics
 
     def update_memory(self, states, actions, rewards, imitation_learning=False):
         if self.memory is None or self.gamma is None:
@@ -177,7 +178,7 @@ class Explorer(object):
                 self.memory.push((state, value, reward, next_state))
 
     def log(self, tag_prefix, global_step):
-        sr, cr, time, reward, avg_return = self.statistics
+        sr, cr, time, reward, avg_return, _, _, _, _, _ = self.statistics
         self.writer.add_scalar(tag_prefix + '/success_rate', sr, global_step)
         self.writer.add_scalar(tag_prefix + '/collision_rate', cr, global_step)
         self.writer.add_scalar(tag_prefix + '/time', time, global_step)
