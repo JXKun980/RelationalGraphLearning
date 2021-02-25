@@ -5,8 +5,8 @@ Follow the original RGL instructions below to install, and read the following co
 
 Simply follow the command line argument list at the end of the files train.py and test.py to start training and testing.
 
-To train a model, change the config argument's config file path, that is the main thing that governs which model to train and the environment settings
-Also specify a different model_dir of your wish.
+To train a model, change the argumment "--config": the config file path, that is the main thing that governs which model to train and the environment settings.
+Also specify a different "--model_dir" of your wish.
 Trained model will be inside data/model_name folder that you specified, and the model files are named rl_model_x, x means the check point number.
 
 Go to configs/icra_benchmark/ to see a list of all different models, and model_predictive_rl is the officical RGL config.
@@ -14,12 +14,12 @@ All configs inherit from config.py, which is the base config, and no change shou
 inherit your config from the config.py's settings, and add only the parameters that are different from the base config.
 
 
-To resume training, firstly go into the model folder, find the model checkpoint file you wish to continue from, and rename it rl_model.py. Then, simply specify the model directory as argument and add --resume flag to train. Resumed training produce resumed_rl_model_x, where x is check point number.
+To resume training, firstly go into the model folder, find the model checkpoint file you wish to continue from, and rename it rl_model.py. Then, simply specify the model directory as argument and add "--resume" flag to train. Resumed training produce resumed_rl_model_x, where x is check point number.
 
 To evaluate a model, follow the argument in test.py. Note I have modified the config so that testing environemnt differs from training environment in that humans will treat robots as visible and have a larger safety distance, you can change that in config file.
 Note also the model folder must have a best_val.py, you can rename any checkpoint as that file if the training has not yet produced one.
 
-I have also added a modify_model_name.py in crowd_nav folder, which will rename all resumed_rl_model_x.py to rl_model_y.py which succeeds the largest already trained checkpoint number. It will also rename the rl_model.py and best_val.py to the one with largest checkpoint number if you use the argument to enable the setting.
+I have also added a modify_model_name.py in crowd_nav folder, which will rename all resumed_rl_model_x.py to rl_model_y.py and their ckeck point numbers will succeed the largest already trained checkpoint number. It will also rename the rl_model.py and best_val.py to the one with largest checkpoint number if you use the argument to enable the setting.
 
 ##### Below are original readme from RGL's repository
 
