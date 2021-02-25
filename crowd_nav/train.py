@@ -178,7 +178,7 @@ def main(args):
     best_val_model = None
     # evaluate the model after imitation learning
 
-    if episode % evaluation_interval == 0:
+    if episode % evaluation_interval == 0 and not args.resume:
         logging.info('Evaluate the model instantly after imitation learning on the validation cases')
         explorer.run_k_episodes(env.case_size['val'], 'val', episode=episode)
         explorer.log('val', episode // evaluation_interval)

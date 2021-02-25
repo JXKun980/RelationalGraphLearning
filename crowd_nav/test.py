@@ -105,6 +105,7 @@ def main(args):
     policy.set_env(env)
     robot.print_info()
 
+    # run the tests
     if args.visualize:
         rewards = []
         ob = env.reset(args.phase, args.test_case)
@@ -129,20 +130,32 @@ def main(args):
                     args.video_file = os.path.join(args.video_dir, policy_config.name + '_' + policy_config.gcn.similarity_function)
                 else:
                     args.video_file = os.path.join(args.video_dir, policy_config.name)
-                args.video_file = args.video_file + '_' + args.phase + '_' + str(args.test_case) + '.mp4'
+                args.video_file = args.video_file + '_' + args.phase + '_' + str(args.test_case) + '.gif'
             env.render('video', args.video_file)
         logging.info('It takes %.2f seconds to finish. Final status is %s, cumulative_reward is %f', env.global_time, info, cumulative_reward)
         if robot.visible and info == 'reach goal':
-            human_times = env.get_human_times()
+            human_times = env.get_human_times() 
             logging.info('Average time for humans to reach goal: %.2f', sum(human_times) / len(human_times))
     else:
-        explorer.run_k_episodes(env.case_size[args.phase], args.phase, print_failure=True)
+        size = env.case_size[args.phase]
+        if args.case_count is not None:
+            size = args.case_count
+        stats, max_speed, social_violation, personal_violation, jerk_cost, aggregated_time = explorer.run_k_episodes(size, args.phase, print_failure=True, start_case=args.test_case)
+        
         if args.plot_test_scenarios_hist:
             test_angle_seeds = np.array(env.test_scene_seeds)
             b = [i * 0.01 for i in range(101)]
             n, bins, patches = plt.hist(test_angle_seeds, b, facecolor='g')
             plt.savefig(os.path.join(args.model_dir, 'test_scene_hist.png'))
             plt.close()
+
+        if args.output_data_txt:
+            f = open(os.path.join(args.model_dir, 'test_result.txt'), 'w')
+            f.write(f'{"max speed": 10} {"social violation": 20} {"personal violation": 20} {"jerk cost": 10} {"aggregated time": 20}\n')
+            for i in range(len(max_speed)):
+                f.write(f'{max_speed: 10} {social_violation: 20} {personal_violation: 20} {jerk_cost: 10} {aggregated_time: 20}\n')
+            f.close()
+            logging.info('Results has been written in test_result.txt')
 
 
 if __name__ == '__main__':
@@ -165,10 +178,14 @@ if __name__ == '__main__':
     parser.add_argument('--human_num', type=int, default=None)
     parser.add_argument('--safety_space', type=float, default=0.2)
     parser.add_argument('--test_scenario', type=str, default=None)
-    parser.add_argument('--plot_test_scenarios_hist', default=True, action='store_true')
     parser.add_argument('-d', '--planning_depth', type=int, default=None)
     parser.add_argument('-w', '--planning_width', type=int, default=None)
     parser.add_argument('--sparse_search', default=False, action='store_true')
+    
+    parser.add_argument('-n', '--case_count', type=int, default=None)
+    parser.add_argument('--plot_test_scenarios_hist', default=False, action='store_true')
+    parser.add_argument('--output_data_txt', default=False, action='store_true')
+
 
     sys_args = parser.parse_args()
 
