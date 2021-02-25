@@ -15,3 +15,21 @@ videos/
 *.log
 crowd_nav/data/
 
+crowd_nav/data/output_lstm_rl_all_scenarios_3/events.out.tfevents.1614164466.mk14
+crowd_nav/data/output_lstm_rl_all_scenarios_4/best_val.pth
+crowd_nav/data/output_lstm_rl_all_scenarios_4/events.out.tfevents.1614164466.mk10
+crowd_nav/data/output_lstm_rl_all_scenarios_4/rl_model.pth
+crowd_nav/data/output_rgl_all_scenarios_3/events.out.tfevents.1614164466.mk17
+crowd_nav/data/output_rgl_all_scenarios_4/best_val.pth
+crowd_nav/data/output_rgl_all_scenarios_4/events.out.tfevents.1614164466.mk14
+crowd_nav/data/output_rgl_all_scenarios_4/rl_model.pth
+crowd_nav/data/output_sarl_all_scenarios_3/best_val.pth
+crowd_nav/data/output_sarl_all_scenarios_3/events.out.tfevents.1614164466.mk16
+crowd_nav/data/output_sarl_all_scenarios_3/rl_model.pth
+crowd_nav/data/output_sarl_all_scenarios_4/best_val.pth
+crowd_nav/data/output_sarl_all_scenarios_4/events.out.tfevents.1614164466.mk10
+crowd_nav/data/output_sarl_all_scenarios_4/rl_model.pth
+crowd_nav/my_videos/cadrl_test_1.gif
+crowd_nav/my_videos/lstm_rl_test_1.gif
+crowd_nav/my_videos/rgl_4_test_1.gif
+crowd_nav/my_videos/sarl_test_1.gif
