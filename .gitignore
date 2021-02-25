@@ -13,3 +13,5 @@ venv*/
 *.mp4
 videos/
 *.log
+crowd_nav/data/
+
