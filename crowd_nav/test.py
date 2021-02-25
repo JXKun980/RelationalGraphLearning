@@ -73,6 +73,7 @@ def main(args):
         env_config.sim.human_num = args.human_num
     env = gym.make('CrowdSim-v0')
     env.configure(env_config)
+    env.set_human_safety_space(getattr(env_config, 'test').human_safety_space) # Override training environemnt human safety space setting
 
     if args.square:
         env.test_scenario = 'square_crossing'
@@ -82,6 +83,7 @@ def main(args):
         env.test_scenario = args.test_scenario
 
     robot = Robot(env_config, 'robot')
+    robot.visible = getattr(env_config, 'test').robot_visible # Override training environemnt robot visible setting
     env.set_robot(robot)
     robot.time_step = env.time_step
     robot.set_policy(policy)
@@ -112,7 +114,7 @@ def main(args):
         done = False
         last_pos = np.array(robot.get_position())
         while not done:
-            action = robot.act(ob)
+            action = robot.act([])
             ob, _, done, info = env.step(action)
             rewards.append(_)
             current_pos = np.array(robot.get_position())
@@ -151,9 +153,9 @@ def main(args):
 
         if args.output_data_txt:
             f = open(os.path.join(args.model_dir, 'test_result.txt'), 'w')
-            f.write(f'{"max speed": 10} {"social violation": 20} {"personal violation": 20} {"jerk cost": 10} {"aggregated time": 20}\n')
+            f.write(f'{"max speed":^10} {"social violation":^20} {"personal violation":^20} {"jerk cost":^10} {"aggregated time":^20}\n')
             for i in range(len(max_speed)):
-                f.write(f'{max_speed: 10} {social_violation: 20} {personal_violation: 20} {jerk_cost: 10} {aggregated_time: 20}\n')
+                f.write(f'{max_speed[i]:^10.3} {social_violation[i]:^20} {personal_violation[i]:^20} {jerk_cost[i]:^10.3} {aggregated_time[i]:^20}\n')
             f.close()
             logging.info('Results has been written in test_result.txt')
 

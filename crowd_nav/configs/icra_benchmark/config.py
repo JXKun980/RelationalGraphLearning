@@ -50,6 +50,11 @@ class BaseEnvConfig(object):
     robot.v_pref = 1
     robot.sensor = 'coordinates'
 
+    # Change in environment when testing the algorithm
+    test = Config()
+    test.robot_visible = True
+    test.human_safety_space = 0.3
+
     def __init__(self, debug=False):
         if debug:
             self.env.val_size = 1

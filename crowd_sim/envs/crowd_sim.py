@@ -78,6 +78,9 @@ class CrowdSim(gym.Env):
         self.all_multi_agent_scenarios = ['circle_crossing', 'square_crossing', 'parallel_traffic', 'perpendicular_traffic']
         self.scenario_cnt = 0
 
+        # Override default human safety distance if set
+        self.human_safety_space = None
+
         # Evaluation
         self.infos = None
         self.last_acceleration = (0,0)
@@ -123,16 +126,22 @@ class CrowdSim(gym.Env):
     def set_robot(self, robot):
         self.robot = robot
 
+    def set_human_safety_space(self, safety_space):
+        self.human_safety_space = safety_space
+        if self.centralized_planning:
+            self.centralized_planner.safety_space = safety_space
+
     def generate_human(self, human=None):
         if human is None:
             human = Human(self.config, 'humans')
         if self.randomize_attributes:
             human.sample_random_attributes()
+        if self.human_safety_space:
+            human.policy.safety_space = self.human_safety_space
+        
         return human
 
     def generate_scenario(self, scenario, human_num, case_counter):
-        test_case = None
-        
         if scenario == 'randomized_multiagent_scenarios':
             scenario = random.choice(self.all_multi_agent_scenarios)
         elif scenario == 'all_multiagent_scenarios':
@@ -193,10 +202,7 @@ class CrowdSim(gym.Env):
             max_x = self.robot.radius + human.radius
             max_num_cases = 10
 
-            if test_case is not None:
-                human_x = test_case % 10 * (max_x - min_x) / 10 + min_x
-            else:
-                human_x = np.random.random() * (max_x - min_x) + min_x
+            human_x = case_counter % max_num_cases * (max_x - min_x) / max_num_cases + min_x
 
             human.set(human_x, self.circle_radius, human_x, -self.circle_radius, 0, 0, 0)
             self.humans = [human]
@@ -213,10 +219,7 @@ class CrowdSim(gym.Env):
             max_x = self.robot.radius + human.radius
             max_num_cases = 10
 
-            if test_case is not None:
-                human_x = test_case % 10 * (max_x - min_x) / 10 + min_x
-            else:
-                human_x = np.random.random() * (max_x - min_x) + min_x
+            human_x = case_counter % max_num_cases * (max_x - min_x) / max_num_cases + min_x
 
             human.set(human_x, -self.circle_radius+2, human_x, self.circle_radius+2, 0, 0, 0)
             self.humans = [human]
@@ -232,10 +235,7 @@ class CrowdSim(gym.Env):
             max_x = -(self.circle_radius - self.robot.radius - human.radius)
             max_num_cases = 10
 
-            if test_case is not None:
-                human_x = test_case % 10 * (max_x - min_x) / 10 + min_x
-            else:
-                human_x = np.random.random() * (max_x - min_x) + min_x
+            human_x = case_counter % max_num_cases * (max_x - min_x) / max_num_cases + min_x
 
             human.set(human_x, 0, -human_x, 0, 0, 0, 0)
             self.humans = [human]
