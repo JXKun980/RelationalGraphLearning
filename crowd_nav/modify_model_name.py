@@ -1,3 +1,12 @@
+'''
+Script that automatically converts trained model names
+
+It can:
+Convert resumed trainings' output file names to correct model names with culumated checkpoint numbers that directly continues on the largest trained checkpoint number
+Convert the latest model to the rl_model.pth file for further training
+Convert the latest model to the best_val.pth file for testing
+'''
+
 import os
 import glob
 import re
@@ -87,11 +96,14 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--data_dir', type=str, default='data/')
-    parser.add_argument('-i', '--resumed_increment', type=int, default='1')
+    # Directory for the data folder which contains all models
+    parser.add_argument('-d', '--data_dir', type=str, default='data/') 
+    # What is the scale of the resumed training checkpoint relative to the already trained checkpoint (e.g. trained model has 1000 ep per ckpt, but resumed training has 500 ep per ckpt, use 0.5)
+    parser.add_argument('-i', '--resumed_increment', type=int, default='1') 
+    # Whether to update rl_model.pth to be the latest model
     parser.add_argument('-t', '--update_training_model', default=False, action='store_true')
+    # Whether to update best_val.pth to be the latest model
     parser.add_argument('-b', '--update_best_val', default=False, action='store_true')
-    parser.add_argument('-e', '--exclude_folder', default=None, type=str)
     
     sys_args = parser.parse_args()
     main(sys_args)

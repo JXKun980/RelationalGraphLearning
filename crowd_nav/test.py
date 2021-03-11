@@ -142,7 +142,8 @@ def main(args):
         size = env.case_size[args.phase]
         if args.case_count is not None:
             size = args.case_count
-        _, _, _, _, _, max_speed, social_violation, personal_violation, jerk_cost, aggregated_time = explorer.run_k_episodes(size, args.phase, print_failure=True, start_case=args.test_case)
+        _, _, _, _, _, max_speed, social_violation, personal_violation, jerk_cost, aggregated_time = 
+            explorer.run_k_episodes(size, args.phase, print_failure=True, start_case=args.test_case)
         
         if args.plot_test_scenarios_hist:
             test_angle_seeds = np.array(env.test_scene_seeds)

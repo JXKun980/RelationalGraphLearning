@@ -227,11 +227,11 @@ def main(args):
             save_every_checkpoint_rl_weight_file = rl_weight_file.split('.')[0] + '_' + str(current_checkpoint) + '.pth'
             policy.save_model(save_every_checkpoint_rl_weight_file)
 
-        # # test with the best val model
-        if best_val_model is not None:
-            policy.load_state_dict(best_val_model)
-            torch.save(best_val_model, os.path.join(args.output_dir, 'best_val.pth'))
-            logging.info('Save the best val model with the reward: {}'.format(best_val_reward))
+            # # test with the best val model
+            if best_val_model is not None:
+                policy.load_state_dict(best_val_model)
+                torch.save(best_val_model, os.path.join(args.output_dir, 'best_val.pth'))
+                logging.info('Save the best val model with the reward: {}'.format(best_val_reward))
     explorer.run_k_episodes(env.case_size['test'], 'test', episode=episode, print_failure=True)
 
 
