@@ -1,5 +1,0 @@
-max speed    social violation    personal violation  jerk cost    aggregated time   
-   1.0              21                   21           1.09e+02          226         
-   1.0              34                   34           1.01e+02          228         
-   1.0              34                   34             88.9            204         
-   1.0              34                   34           1.08e+02          234         
