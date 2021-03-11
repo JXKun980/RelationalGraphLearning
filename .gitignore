@@ -13,3 +13,6 @@ venv*/
 *.mp4
 videos/
 *.log
+*.script
+data/
+backup_slurm_files/

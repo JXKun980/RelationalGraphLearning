@@ -44,11 +44,16 @@ class BaseEnvConfig(object):
     humans.sensor = 'coordinates'
 
     robot = Config()
-    robot.visible = False
+    robot.visible = False # DO NOT CHANGE THIS
     robot.policy = 'none'
     robot.radius = 0.3
     robot.v_pref = 1
     robot.sensor = 'coordinates'
+
+    # Change in environment when testing the algorithm
+    test = Config()
+    test.robot_visible = False
+    test.human_safety_space = 0.2
 
     def __init__(self, debug=False):
         if debug:

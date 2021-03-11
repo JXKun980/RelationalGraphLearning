@@ -107,7 +107,7 @@ class MultiHumanRL(CADRL):
         rotated_state_tensor = self.rotate(state_tensor)
         if self.with_om:
             occupancy_maps = self.build_occupancy_maps(state.human_states)
-            rotated_state_tensor = torch.cat([rotated_state_tensor, occupancy_maps], dim=1)
+            rotated_state_tensor = torch.cat([rotated_state_tensor.to(self.device), occupancy_maps.to(self.device)], dim=1)
 
         return rotated_state_tensor
 

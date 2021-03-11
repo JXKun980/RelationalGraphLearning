@@ -73,10 +73,18 @@ class CrowdSim(gym.Env):
         self.human_starts = []
         self.human_goals = []
 
+        self.phase = None
+        self.all_scenarios = ['circle_crossing', 'square_crossing', 'parallel_traffic', 'perpendicular_traffic', '2_agents_passing', '2_agents_overtaking', '2_agents_crossing']
+        self.all_multi_agent_scenarios = ['circle_crossing', 'square_crossing', 'parallel_traffic', 'perpendicular_traffic']
+        self.scenario_cnt = 0
+
+        # Override default human safety distance if set
+        self.human_safety_space = None
+
+        # Evaluation
         self.infos = None
         self.last_acceleration = (0,0)
-
-        self.phase = None
+        self.min_personal_space = 0.2
 
     def configure(self, config):
         self.config = config
@@ -118,17 +126,28 @@ class CrowdSim(gym.Env):
     def set_robot(self, robot):
         self.robot = robot
 
+    def set_human_safety_space(self, safety_space):
+        self.human_safety_space = safety_space
+        if self.centralized_planning:
+            self.centralized_planner.safety_space = safety_space
+
     def generate_human(self, human=None):
         if human is None:
             human = Human(self.config, 'humans')
         if self.randomize_attributes:
             human.sample_random_attributes()
+        if self.human_safety_space:
+            human.policy.safety_space = self.human_safety_space
+        
         return human
 
-    def generate_scenario(self, scenario, human_num, test_case=None):
-        if scenario == 'randomized':
-            scenario = random.choice(['circle_crossing', 'square_crossing', 'parallel_traffic', 'perpendicular_traffic'])
-            
+    def generate_scenario(self, scenario, human_num, case_counter):
+        if scenario == 'randomized_multiagent_scenarios':
+            scenario = random.choice(self.all_multi_agent_scenarios)
+        elif scenario == 'all_multiagent_scenarios':
+            case_counter = case_counter % len(self.all_multi_agent_scenarios)
+            scenario = self.all_multi_agent_scenarios[case_counter]
+    
         if scenario == 'circle_crossing':
             # Robot
             self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
@@ -148,7 +167,7 @@ class CrowdSim(gym.Env):
                         break
                 human.set(px, py, -px, -py, 0, 0, 0)
                 self.humans.append(human)
-
+                
         elif scenario == 'square_crossing':
             # Robot
             self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
@@ -156,19 +175,15 @@ class CrowdSim(gym.Env):
             self.humans = []
             for _ in range(human_num):
                 human = self.generate_human()
-                if np.random.random() > 0.5:
-                    sign = -1
-                else:
-                    sign = 1
                 while True:
-                    px = np.random.random() * self.square_width * 0.5 * sign
-                    py = (np.random.random() - 0.5) * self.square_width
+                    px = (np.random.random() - 0.5) * self.square_width * 0.4
+                    py = (np.random.random() - 0.5) * self.square_width * 0.4
                     safe = self.is_safe_agent_spawn(px, py, human.radius)
                     if safe:
                         break
                 while True:
-                    gx = np.random.random() * self.square_width * 0.5 * - sign
-                    gy = (np.random.random() - 0.5) * self.square_width
+                    gx = (np.random.random() - 0.5) * self.square_width * 0.4
+                    gy = (np.random.random() - 0.5) * self.square_width * 0.4
                     safe = self.is_safe_goal_spawn(gx, gy, human.radius)
                     if safe:
                         break
@@ -186,10 +201,7 @@ class CrowdSim(gym.Env):
             max_x = self.robot.radius + human.radius
             max_num_cases = 10
 
-            if test_case is not None:
-                human_x = test_case % 10 * (max_x - min_x) / 10 + min_x
-            else:
-                human_x = np.random.random() * (max_x - min_x) + min_x
+            human_x = case_counter % max_num_cases * (max_x - min_x) / max_num_cases + min_x
 
             human.set(human_x, self.circle_radius, human_x, -self.circle_radius, 0, 0, 0)
             self.humans = [human]
@@ -200,15 +212,13 @@ class CrowdSim(gym.Env):
             # Human
             self.human_num = 1
             human = self.generate_human()
+            human.v_pref = 0.3
 
             min_x = - (self.robot.radius + human.radius)
             max_x = self.robot.radius + human.radius
             max_num_cases = 10
 
-            if test_case is not None:
-                human_x = test_case % 10 * (max_x - min_x) / 10 + min_x
-            else:
-                human_x = np.random.random() * (max_x - min_x) + min_x
+            human_x = case_counter % max_num_cases * (max_x - min_x) / max_num_cases + min_x
 
             human.set(human_x, -self.circle_radius+2, human_x, self.circle_radius+2, 0, 0, 0)
             self.humans = [human]
@@ -224,12 +234,9 @@ class CrowdSim(gym.Env):
             max_x = -(self.circle_radius - self.robot.radius - human.radius)
             max_num_cases = 10
 
-            if test_case is not None:
-                human_x = test_case % 10 * (max_x - min_x) / 10 + min_x
-            else:
-                human_x = np.random.random() * (max_x - min_x) + min_x
+            human_x = case_counter % max_num_cases * (max_x - min_x) / max_num_cases + min_x
 
-            human.set(human_x, -self.circle_radius+2, human_x, self.circle_radius+2, 0, 0, 0)
+            human.set(human_x, 0, -human_x, 0, 0, 0, 0)
             self.humans = [human]
 
         elif scenario == 'parallel_traffic':
@@ -326,8 +333,8 @@ class CrowdSim(gym.Env):
                 self.test_scenario = 'circle_crossing'
 
             # Generate scenarios based on simulation config
-            self.generate_scenario(self.test_scenario, self.human_num, test_case)
-
+            self.generate_scenario(self.test_scenario, self.human_num, self.case_counter[phase])
+            print('case_counter: {}'.format(self.case_counter[phase]))
             # case_counter is always between 0 and case_size[phase]
             self.case_counter[phase] = (self.case_counter[phase] + 1) % self.case_size[phase]
         else:
@@ -456,6 +463,12 @@ class CrowdSim(gym.Env):
         info['min_separation'] = dmin
         info['social_violation_cnt'] = heading_rect_violations
         info['jerk_cost'] = jerk_cost
+        info['speed'] = math.sqrt(action.vx**2 + action.vy**2)
+
+        if dmin < self.min_personal_space:
+            info['personal_violation_cnt'] = 1
+        else:
+            info['personal_violation_cnt'] = 0
 
         if self.global_time >= self.time_limit - 1:
             info['aggregated_time'] = math.inf
@@ -548,7 +561,7 @@ class CrowdSim(gym.Env):
         cmap = plt.cm.get_cmap('hsv', 10)
         robot_color = 'black'
         arrow_style = patches.ArrowStyle("->", head_length=4, head_width=2)
-        display_numbers = True
+        display_numbers = False
 
         if mode == 'traj':
             fig, ax = plt.subplots(figsize=(7, 7))
@@ -610,8 +623,9 @@ class CrowdSim(gym.Env):
             ax.set_xlabel('x(m)', fontsize=14)
             ax.set_ylabel('y(m)', fontsize=14)
             show_human_start_goal = False
-            show_eval_info = True
-            show_social_zone = True
+            show_sensor_range = True
+            show_eval_info = False
+            show_social_zone = False
 
             # add human start positions and goals
             human_colors = [cmap(i) for i in range(len(self.humans))]
@@ -629,7 +643,7 @@ class CrowdSim(gym.Env):
             # add robot start position
             robot_start = mlines.Line2D([self.robot.get_start_position()[0]], [self.robot.get_start_position()[1]],
                                         color=robot_color,
-                                        marker='o', linestyle='None', markersize=8)
+                                        marker='o', linestyle='None', markersize=8, label='Start')
             robot_start_position = [self.robot.get_start_position()[0], self.robot.get_start_position()[1]]
             ax.add_artist(robot_start)
             # add robot and its goal 
@@ -638,10 +652,12 @@ class CrowdSim(gym.Env):
                                  color=robot_color, marker='*', linestyle='None',
                                  markersize=15, label='Goal')
             robot = plt.Circle(robot_positions[0], self.robot.radius, fill=False, color=robot_color)
-            # sensor_range = plt.Circle(robot_positions[0], self.robot_sensor_range, fill=False, ls='dashed')
             ax.add_artist(robot)
             ax.add_artist(goal)
-            plt.legend([robot, goal], ['Robot', 'Goal'], fontsize=14)
+            plt.legend([robot, goal, robot_start], ['Robot', 'Goal', 'Start'], fontsize=14)
+            # if show_sensor_range:
+            #     sensor_range = plt.Circle(robot_positions[0], self.robot_sensor_range, fill=False, ls='dashed')
+            #     ax.add_artist(sensor_range)
 
 
             # add humans and their numbers
@@ -673,6 +689,7 @@ class CrowdSim(gym.Env):
             # calculate evaluation information
             list_aggregated_time = [self.infos[0]['aggregated_time']]
             list_min_separation = [self.infos[0]['min_separation']]
+            list_personal_violation_cnt = [self.infos[0]['personal_violation_cnt']]
             list_social_violation_cnt = [self.infos[0]['social_violation_cnt']]
             list_jerk_cost = [self.infos[0]['jerk_cost']]
             for i in range(1, len(self.infos)):
@@ -680,6 +697,7 @@ class CrowdSim(gym.Env):
                 list_min_separation.append(min(list_min_separation[i-1], self.infos[i]['min_separation']))
                 list_social_violation_cnt.append(list_social_violation_cnt[i-1] + self.infos[i]['social_violation_cnt'])
                 list_jerk_cost.append(list_jerk_cost[i-1] + self.infos[i]['jerk_cost'])
+                list_personal_violation_cnt.append(list_personal_violation_cnt[i-1] + self.infos[i]['personal_violation_cnt'])
 
             # visualize attention scores
             # if hasattr(self.robot.policy, 'get_attention_weights'):
@@ -799,7 +817,7 @@ class CrowdSim(gym.Env):
 
                 if show_eval_info:
                     eval_text.set_text(f"Aggregated Time: {list_aggregated_time[frame_num]}\
-                        \nMinimum Separation: {list_min_separation[frame_num]: .4f}\
+                        \nPersonal Zone Violations: {list_personal_violation_cnt[frame_num]}\
                         \nSocial Zone Violations: {list_social_violation_cnt[frame_num]}\
                         \nJerk Cost: {list_jerk_cost[frame_num]: .3f}")
 
@@ -877,12 +895,13 @@ class CrowdSim(gym.Env):
 
             if output_file is not None:
                 # save as video
-                ffmpeg_writer = animation.FFMpegWriter(fps=10, metadata=dict(artist='Me'), bitrate=1800)
+                # ffmpeg_writer = animation.FFMpegWriter(fps=10, metadata=dict(artist='Me'), bitrate=1800)
                 # writer = ffmpeg_writer(fps=10, metadata=dict(artist='Me'), bitrate=1800)
-                anim.save(output_file, writer=ffmpeg_writer)
+                # anim.save(output_file, writer=ffmpeg_writer)
 
                 # save output file as gif if imagemagic is installed
-                # anim.save(output_file, writer='imagemagic', fps=12)
+                plt.rcParams["animation.convert_path"] = r'/usr/bin/convert'
+                anim.save(output_file, writer='imagemagick', fps=12)
             else:
                 plt.show()
         else:

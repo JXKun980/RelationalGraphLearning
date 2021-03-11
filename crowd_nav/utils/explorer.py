@@ -19,7 +19,7 @@ class Explorer(object):
 
     # @profile
     def run_k_episodes(self, k, phase, update_memory=False, imitation_learning=False, episode=None, epoch=None,
-                       print_failure=False):
+                       print_failure=False, start_case=None):
         self.robot.policy.set_phase(phase)
         success_times = []
         collision_times = []
@@ -34,17 +34,34 @@ class Explorer(object):
         collision_cases = []
         timeout_cases = []
 
+        global_max_speed = []
+        global_social_violation_cnt = []
+        global_personal_violation_cnt = []
+        global_jerk_cost = []
+        global_aggregated_time = []
+
         if k != 1:
             pbar = tqdm(total=k)
         else:
             pbar = None
 
         for i in range(k):
-            ob = self.env.reset(phase)
+            # If a starting case number is given, reset the environment with case = (start_case + i) every time
+            # Otherwise the env.reset() function will increament the case automatically by 1 every time
+            if start_case:
+                ob = self.env.reset(phase, start_case+i)
+            else:
+                ob = self.env.reset(phase)
             done = False
             states = []
             actions = []
             rewards = []
+
+            episodic_max_speed = 0
+            episodic_social_violation_cnt = 0
+            episodic_personal_violation_cnt = 0
+            episodic_jerk_cost = 0
+            episodic_aggregated_time = 0
             while not done:
                 action = self.robot.act(ob)
                 ob, reward, done, info = self.env.step(action)
@@ -52,13 +69,26 @@ class Explorer(object):
                 actions.append(action)
                 rewards.append(reward)
 
+                # Episodic info logging
                 if isinstance(info['event'], Discomfort):
                     discomfort += 1
                     min_dist.append(info['event'].min_dist)
+                episodic_max_speed = max(info['speed'], episodic_max_speed)
+                episodic_social_violation_cnt += info['social_violation_cnt']
+                episodic_personal_violation_cnt += info['personal_violation_cnt']
+                episodic_jerk_cost += info['jerk_cost']
+                episodic_aggregated_time += info['aggregated_time']
 
             if isinstance(info['event'], ReachGoal):
                 success += 1
                 success_times.append(self.env.global_time)
+
+                # Update logged info to global if episode succeeds
+                global_max_speed.append(episodic_max_speed)
+                global_social_violation_cnt.append(episodic_social_violation_cnt)
+                global_personal_violation_cnt.append(episodic_personal_violation_cnt)
+                global_jerk_cost.append(episodic_jerk_cost)
+                global_aggregated_time.append(episodic_aggregated_time)
             elif isinstance(info['event'], Collision):
                 collision += 1
                 collision_cases.append(i)
@@ -90,13 +120,23 @@ class Explorer(object):
         collision_rate = collision / k
         assert success + collision + timeout == k
         avg_nav_time = sum(success_times) / len(success_times) if success_times else self.env.time_limit
+        if len(global_max_speed) > 0:
+            avg_max_speed = max(global_max_speed)
+        else:
+            avg_max_speed = 0
+        avg_social_violation_cnt = sum(global_social_violation_cnt) / k
+        avg_personal_violation_cnt = sum(global_personal_violation_cnt) / k
+        avg_jerk_cost = sum(global_jerk_cost) / k
+        avg_aggregated_time = sum(global_aggregated_time) / k
 
         extra_info = '' if episode is None else 'in episode {} '.format(episode)
         extra_info = extra_info + '' if epoch is None else extra_info + ' in epoch {} '.format(epoch)
         logging.info('{:<5} {}has success rate: {:.2f}, collision rate: {:.2f}, nav time: {:.2f}, total reward: {:.4f},'
-                     ' average return: {:.4f}'. format(phase.upper(), extra_info, success_rate, collision_rate,
+                     ' average return: {:.4f}, avg social violation: {:.2f}, avg personal violation: {:.2f}, avg jerk cost: {:.2f},'
+                     ' avg aggregated time: {:.2f}, maximum speed: {:.2f}'. format(phase.upper(), extra_info, success_rate, collision_rate,
                                                        avg_nav_time, average(cumulative_rewards),
-                                                       average(average_returns)))
+                                                       average(average_returns), avg_social_violation_cnt, avg_personal_violation_cnt,
+                                                       avg_jerk_cost, avg_aggregated_time, avg_max_speed))
         if phase in ['val', 'test']:
             total_time = sum(success_times + collision_times + timeout_times)
             logging.info('Frequency of being in danger: %.2f and average min separate distance in danger: %.2f',
@@ -106,7 +146,7 @@ class Explorer(object):
             logging.info('Collision cases: ' + ' '.join([str(x) for x in collision_cases]))
             logging.info('Timeout cases: ' + ' '.join([str(x) for x in timeout_cases]))
 
-        self.statistics = success_rate, collision_rate, avg_nav_time, average(cumulative_rewards), average(average_returns)
+        self.statistics = success_rate, collision_rate, avg_nav_time, average(cumulative_rewards), average(average_returns), global_max_speed, global_social_violation_cnt, global_personal_violation_cnt, global_jerk_cost, global_aggregated_time
 
         return self.statistics
 
@@ -140,7 +180,7 @@ class Explorer(object):
                 self.memory.push((state, value, reward, next_state))
 
     def log(self, tag_prefix, global_step):
-        sr, cr, time, reward, avg_return = self.statistics
+        sr, cr, time, reward, avg_return, _, _, _, _, _ = self.statistics
         self.writer.add_scalar(tag_prefix + '/success_rate', sr, global_step)
         self.writer.add_scalar(tag_prefix + '/collision_rate', cr, global_step)
         self.writer.add_scalar(tag_prefix + '/time', time, global_step)

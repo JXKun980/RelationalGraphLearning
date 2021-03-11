@@ -1,15 +1,15 @@
-from configs.icra_benchmark.config import BaseEnvConfig, BasePolicyConfig, BaseTrainConfig, Config
+from crowd_nav.configs.icra_benchmark.config import BaseEnvConfig, BasePolicyConfig, BaseTrainConfig, Config
 
 
 class EnvConfig(BaseEnvConfig):
     def __init__(self, debug=False):
         super(EnvConfig, self).__init__(debug)
-        self.env.randomize_attributes = True
-        self.sim.train_val_scenario = 'randomized'
+        self.sim.train_val_scenario = 'all_multiagent_scenarios'
+        self.sim.test_scenario = 'all_multiagent_scenarios'
 
 class PolicyConfig(BasePolicyConfig):
     def __init__(self, debug=False):
-        super(PolicyConfig, self).__init__(debug)
+       	super(PolicyConfig, self).__init__(debug)
         self.name = 'model_predictive_rl'
 
         # gcn
@@ -36,3 +36,4 @@ class TrainConfig(BaseTrainConfig):
         self.train.freeze_state_predictor = False
         self.train.detach_state_predictor = False
         self.train.reduce_sp_update_frequency = False
+        self.train.train_episodes = 15000
