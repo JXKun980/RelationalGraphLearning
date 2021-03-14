@@ -53,7 +53,7 @@ class BaseEnvConfig(object):
     # Change in environment when testing the algorithm
     test = Config()
     test.robot_visible = False
-    test.human_safety_space = 0.2
+    test.human_safety_space = 0
 
     def __init__(self, debug=False):
         if debug:

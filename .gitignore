@@ -16,3 +16,5 @@ videos/
 *.script
 data/
 backup_slurm_files/
+*.out
+my_videos/
