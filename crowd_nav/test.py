@@ -23,6 +23,8 @@ def main(args):
     if args.model_dir is not None:
         if args.config is not None:
             config_file = args.config
+        elif args.model_folder_config is not None:
+            config_file = os.path.join(args.model_dir, args.model_folder_config)
         else:
             config_file = os.path.join(args.model_dir, 'config.py')
         if args.il:
@@ -188,7 +190,7 @@ if __name__ == '__main__':
     parser.add_argument('-n', '--case_count', type=int, default=None)
     parser.add_argument('--plot_test_scenarios_hist', default=False, action='store_true')
     parser.add_argument('--output_data_file_name', default=None, type=str)
-
+    parser.add_argument('--model_folder_config', default=None, type=str)
 
     sys_args = parser.parse_args()
 
