@@ -39,6 +39,7 @@ class Explorer(object):
         global_personal_violation_cnt = []
         global_jerk_cost = []
         global_aggregated_time = []
+        global_side_preference = []
 
         if k != 1:
             pbar = tqdm(total=k)
@@ -62,6 +63,7 @@ class Explorer(object):
             episodic_personal_violation_cnt = 0
             episodic_jerk_cost = 0
             episodic_aggregated_time = 0
+            episodic_side_preference = None
             while not done:
                 action = self.robot.act(ob)
                 ob, reward, done, info = self.env.step(action)
@@ -78,6 +80,10 @@ class Explorer(object):
                 episodic_personal_violation_cnt += info['personal_violation_cnt']
                 episodic_jerk_cost += info['jerk_cost']
                 episodic_aggregated_time += info['aggregated_time']
+                if episodic_side_preference is None:
+                    episodic_side_preference = info['side_preference']
+                elif info['side_preference'] is not None and episodic_side_preference != info['side_preference']:
+                    raise Exception('Side preference changed mid-episode')
 
             if isinstance(info['event'], ReachGoal):
                 success += 1
@@ -89,6 +95,7 @@ class Explorer(object):
                 global_personal_violation_cnt.append(episodic_personal_violation_cnt)
                 global_jerk_cost.append(episodic_jerk_cost)
                 global_aggregated_time.append(episodic_aggregated_time)
+                global_side_preference.append(episodic_side_preference)
             elif isinstance(info['event'], Collision):
                 collision += 1
                 collision_cases.append(i)
@@ -128,15 +135,17 @@ class Explorer(object):
         avg_personal_violation_cnt = sum(global_personal_violation_cnt) / k
         avg_jerk_cost = sum(global_jerk_cost) / k
         avg_aggregated_time = sum(global_aggregated_time) / k
+        left_percentage = global_side_preference.count(0) / len(global_side_preference)
+        right_percentage = global_side_preference.count(1) / len(global_side_preference)
 
         extra_info = '' if episode is None else 'in episode {} '.format(episode)
         extra_info = extra_info + '' if epoch is None else extra_info + ' in epoch {} '.format(epoch)
         logging.info('{:<5} {}has success rate: {:.2f}, collision rate: {:.2f}, nav time: {:.2f}, total reward: {:.4f},'
                      ' average return: {:.4f}, avg social violation: {:.2f}, avg personal violation: {:.2f}, avg jerk cost: {:.2f},'
-                     ' avg aggregated time: {:.2f}, maximum speed: {:.2f}'. format(phase.upper(), extra_info, success_rate, collision_rate,
+                     ' avg aggregated time: {:.2f}, maximum speed: {:.2f}, left %: {:.2f}, right %: {:.2f}'. format(phase.upper(), extra_info, success_rate, collision_rate,
                                                        avg_nav_time, average(cumulative_rewards),
                                                        average(average_returns), avg_social_violation_cnt, avg_personal_violation_cnt,
-                                                       avg_jerk_cost, avg_aggregated_time, avg_max_speed))
+                                                       avg_jerk_cost, avg_aggregated_time, avg_max_speed, left_percentage, right_percentage))
         if phase in ['val', 'test']:
             total_time = sum(success_times + collision_times + timeout_times)
             logging.info('Frequency of being in danger: %.2f and average min separate distance in danger: %.2f',
