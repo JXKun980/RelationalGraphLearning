@@ -334,7 +334,7 @@ class CrowdSim(gym.Env):
 
             # Generate scenarios based on simulation config
             self.generate_scenario(self.test_scenario, self.human_num, self.case_counter[phase])
-            print('case_counter: {}'.format(self.case_counter[phase]))
+            # print('case_counter: {}'.format(self.case_counter[phase]))
             # case_counter is always between 0 and case_size[phase]
             self.case_counter[phase] = (self.case_counter[phase] + 1) % self.case_size[phase]
         else:

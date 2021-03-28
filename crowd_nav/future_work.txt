@@ -1,0 +1,5 @@
+Discomfort distance reward is still set to be 0.2 for training, thus will use that number for evaluation rather than 1.2m said in the paper
+Maximum speed is capped at 1 in action space, need to increase it to see the model's ability to use lower speed when possible (adherence to a perferred speed rather than going to maximum)
+Use 10 humans
+Use real human walking data
+
