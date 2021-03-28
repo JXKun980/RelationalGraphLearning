@@ -74,7 +74,7 @@ class CrowdSim(gym.Env):
         self.human_goals = []
 
         self.phase = None
-        self.all_scenarios = ['circle_crossing', 'square_crossing', 'parallel_traffic', 'perpendicular_traffic', '2_agents_passing', '2_agents_overtaking', '2_agents_crossing']
+        self.all_two_agent_scenarios = ['2_agents_passing', '2_agents_overtaking', '2_agents_crossing']
         self.all_multi_agent_scenarios = ['circle_crossing', 'square_crossing', 'parallel_traffic', 'perpendicular_traffic']
         self.scenario_cnt = 0
 
@@ -199,7 +199,7 @@ class CrowdSim(gym.Env):
 
             min_x = - (self.robot.radius + human.radius)
             max_x = self.robot.radius + human.radius
-            max_num_cases = 10
+            max_num_cases = 20
 
             human_x = case_counter % max_num_cases * (max_x - min_x) / max_num_cases + min_x
 
@@ -216,7 +216,7 @@ class CrowdSim(gym.Env):
 
             min_x = - (self.robot.radius + human.radius)
             max_x = self.robot.radius + human.radius
-            max_num_cases = 10
+            max_num_cases = 20
 
             human_x = case_counter % max_num_cases * (max_x - min_x) / max_num_cases + min_x
 
@@ -232,7 +232,7 @@ class CrowdSim(gym.Env):
 
             min_x = -(self.circle_radius + self.robot.radius + human.radius)
             max_x = -(self.circle_radius - self.robot.radius - human.radius)
-            max_num_cases = 10
+            max_num_cases = 20
 
             human_x = case_counter % max_num_cases * (max_x - min_x) / max_num_cases + min_x
 
@@ -457,6 +457,17 @@ class CrowdSim(gym.Env):
         jerk_cost = d_ax**2 + d_ay**2
         self.last_acceleration = (ax, ay)
 
+        # check for left-hand / right-hand rules
+        side_preference = None
+        if self.test_scenario in self.all_two_agent_scenarios:
+            h = self.humans[0]
+            # If agent's y position is within the y range occupied by the other human (they are on the same vertical position)
+            if (h.py - h.radius) <= end_position[1] <= (h.py + h.radius): 
+                if h.px < end_position[0]:
+                    side_preference = 0
+                else:
+                    side_preference = 1
+
         # state information logging
         info = {}
         info['aggregated_time'] = 1
@@ -464,6 +475,7 @@ class CrowdSim(gym.Env):
         info['social_violation_cnt'] = heading_rect_violations
         info['jerk_cost'] = jerk_cost
         info['speed'] = math.sqrt(action.vx**2 + action.vy**2)
+        info['side_preference'] = side_preference
 
         if dmin < self.min_personal_space:
             info['personal_violation_cnt'] = 1
