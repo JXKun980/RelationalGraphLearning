@@ -144,8 +144,7 @@ def main(args):
         size = env.case_size[args.phase]
         if args.case_count is not None:
             size = args.case_count
-        _, _, _, _, _, max_speed, social_violation, personal_violation, jerk_cost, aggregated_time = \
-            explorer.run_k_episodes(size, args.phase, print_failure=True, start_case=args.test_case)
+        statistics = explorer.run_k_episodes(size, args.phase, print_failure=True, start_case=args.test_case)
         
         if args.plot_test_scenarios_hist:
             test_angle_seeds = np.array(env.test_scene_seeds)
@@ -155,11 +154,21 @@ def main(args):
             plt.close()
 
         if args.output_data_file_name:
-            f = open(os.path.join(args.model_dir, args.output_data_file_name), 'w')
-            f.write(f'{"max speed":^10} {"social violation":^20} {"personal violation":^20} {"jerk cost":^10} {"aggregated time":^20}\n')
-            for i in range(len(max_speed)):
-                f.write(f'{max_speed[i]:^10.3} {social_violation[i]:^20} {personal_violation[i]:^20} {jerk_cost[i]:^10.3} {aggregated_time[i]:^20}\n')
-            f.close()
+            with open(os.path.join(args.model_dir, args.output_data_file_name), 'w') as f:
+                f.write(
+                    f'{"avg speed":^10} {"speed violation":^20} {"social violation":^20} {"personal violation":^20}'
+                    f'{"jerk cost":^10} {"aggregated time":^20} {"side preference":^10}\n'
+                )
+                for i, _ in enumerate(statistics['avg speed']):
+                    f.write(
+                        f'{statistics["avg speed"][i]:^10.3}'
+                        f'{statistics["speed violation"][i]:^20}'
+                        f'{statistics["social violation"][i]:^20}'
+                        f'{statistics["personal violation"][i]:^20}'
+                        f'{statistics["jerk cost"][i]:^10.3}'
+                        f'{statistics["aggregated time"][i]:^20}'
+                        f'{statistics["side preference"][i]:^20} \n'
+                    )
             logging.info(f'Results has been written in {args.output_data_file_name}')
 
 

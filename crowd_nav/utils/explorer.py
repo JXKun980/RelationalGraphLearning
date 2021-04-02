@@ -4,6 +4,7 @@ import copy
 import torch
 from tqdm import tqdm
 from crowd_sim.envs.utils.info import *
+from numpy import mean, std
 
 
 class Explorer(object):
@@ -34,12 +35,13 @@ class Explorer(object):
         collision_cases = []
         timeout_cases = []
 
-        global_max_speed = []
-        global_social_violation_cnt = []
-        global_personal_violation_cnt = []
-        global_jerk_cost = []
-        global_aggregated_time = []
-        global_side_preference = []
+        avg_speed = {'episodic':0, 'global':[]}
+        speed_violation = {'episodic':0, 'global':[]}
+        social_violation_cnt = {'episodic':0, 'global':[]}
+        personal_violation_cnt = {'episodic':0, 'global':[]}
+        jerk_cost = {'episodic':0, 'global':[]}
+        aggregated_time = {'episodic':0, 'global':[]}
+        side_preference = {'episodic':None, 'global':[]}
 
         if k != 1:
             pbar = tqdm(total=k)
@@ -57,50 +59,54 @@ class Explorer(object):
             states = []
             actions = []
             rewards = []
+            
+            avg_speed['episodic'] = 0
+            speed_violation['episodic'] = 0
+            social_violation_cnt['episodic'] = 0
+            personal_violation_cnt['episodic'] = 0
+            jerk_cost['episodic'] = 0
+            aggregated_time['episodic'] = 0
+            side_preference['episodic'] = None
 
-            episodic_max_speed = 0
-            episodic_social_violation_cnt = 0
-            episodic_personal_violation_cnt = 0
-            episodic_jerk_cost = 0
-            episodic_aggregated_time = 0
-            episodic_side_preference = None
             while not done:
                 action = self.robot.act(ob)
-                ob, reward, done, info = self.env.step(action)
+                ob, reward, done, step_info = self.env.step(action)
                 states.append(self.robot.policy.last_state)
                 actions.append(action)
                 rewards.append(reward)
 
                 # Episodic info logging
-                if isinstance(info['event'], Discomfort):
+                if isinstance(step_info['event'], Discomfort):
                     discomfort += 1
-                    min_dist.append(info['event'].min_dist)
-                episodic_max_speed = max(info['speed'], episodic_max_speed)
-                episodic_social_violation_cnt += info['social_violation_cnt']
-                episodic_personal_violation_cnt += info['personal_violation_cnt']
-                episodic_jerk_cost += info['jerk_cost']
-                episodic_aggregated_time += info['aggregated_time']
-                if episodic_side_preference is None:
-                    episodic_side_preference = info['side_preference']
-                elif info['side_preference'] is not None and episodic_side_preference != info['side_preference']:
+                    min_dist.append(step_info['event'].min_dist)
+                avg_speed['episodic'] = avg_speed['episodic'] + (step_info['speed'] - avg_speed['episodic']) / len(states)
+                speed_violation['episodic'] = speed_violation['episodic'] + (step_info['speed'] > 1)
+                social_violation_cnt['episodic'] += step_info['social_violation_cnt']
+                personal_violation_cnt['episodic'] += step_info['personal_violation_cnt']
+                jerk_cost['episodic'] += step_info['jerk_cost']
+                aggregated_time['episodic'] += step_info['aggregated_time']
+                if side_preference['episodic'] is None:
+                    side_preference['episodic'] = step_info['side_preference']
+                elif step_info['side_preference'] is not None and side_preference['episodic'] != step_info['side_preference']:
                     raise Exception('Side preference changed mid-episode')
 
-            if isinstance(info['event'], ReachGoal):
+            if isinstance(step_info['event'], ReachGoal):
                 success += 1
                 success_times.append(self.env.global_time)
 
                 # Update logged info to global if episode succeeds
-                global_max_speed.append(episodic_max_speed)
-                global_social_violation_cnt.append(episodic_social_violation_cnt)
-                global_personal_violation_cnt.append(episodic_personal_violation_cnt)
-                global_jerk_cost.append(episodic_jerk_cost)
-                global_aggregated_time.append(episodic_aggregated_time)
-                global_side_preference.append(episodic_side_preference)
-            elif isinstance(info['event'], Collision):
+                avg_speed['global'].append(avg_speed['episodic'])
+                speed_violation['global'].append(speed_violation['episodic'])
+                social_violation_cnt['global'].append(social_violation_cnt['episodic'])
+                personal_violation_cnt['global'].append(personal_violation_cnt['episodic'])
+                jerk_cost['global'].append(jerk_cost['episodic'])
+                aggregated_time['global'].append(aggregated_time['episodic'])
+                side_preference['global'].append(side_preference['episodic'])
+            elif isinstance(step_info['event'], Collision):
                 collision += 1
                 collision_cases.append(i)
                 collision_times.append(self.env.global_time)
-            elif isinstance(info['event'], Timeout):
+            elif isinstance(step_info['event'], Timeout):
                 timeout += 1
                 timeout_cases.append(i)
                 timeout_times.append(self.env.time_limit)
@@ -108,7 +114,7 @@ class Explorer(object):
                 raise ValueError('Invalid end signal from environment')
 
             if update_memory:
-                if isinstance(info['event'], ReachGoal) or isinstance(info['event'], Collision):
+                if isinstance(step_info['event'], ReachGoal) or isinstance(step_info['event'], Collision):
                     # only add positive(success) or negative(collision) experience in experience set
                     self.update_memory(states, actions, rewards, imitation_learning)
 
@@ -119,7 +125,7 @@ class Explorer(object):
                 step_return = sum([pow(self.gamma, t * self.robot.time_step * self.robot.v_pref)
                                    * reward for t, reward in enumerate(rewards[step:])])
                 returns.append(step_return)
-            average_returns.append(average(returns))
+            average_returns.append(mean(returns))
 
             if pbar:
                 pbar.update(1)
@@ -127,35 +133,50 @@ class Explorer(object):
         collision_rate = collision / k
         assert success + collision + timeout == k
         avg_nav_time = sum(success_times) / len(success_times) if success_times else self.env.time_limit
-        if len(global_max_speed) > 0:
-            avg_max_speed = max(global_max_speed)
-        else:
-            avg_max_speed = 0
-        avg_social_violation_cnt = sum(global_social_violation_cnt) / k
-        avg_personal_violation_cnt = sum(global_personal_violation_cnt) / k
-        avg_jerk_cost = sum(global_jerk_cost) / k
-        avg_aggregated_time = sum(global_aggregated_time) / k
-        left_percentage = global_side_preference.count(0) / len(global_side_preference)
-        right_percentage = global_side_preference.count(1) / len(global_side_preference)
+        left_percentage = side_preference['global'].count(0) / len(side_preference['global'])
+        right_percentage = side_preference['global'].count(1) / len(side_preference['global'])
 
         extra_info = '' if episode is None else 'in episode {} '.format(episode)
         extra_info = extra_info + '' if epoch is None else extra_info + ' in epoch {} '.format(epoch)
-        logging.info('{:<5} {}has success rate: {:.2f}, collision rate: {:.2f}, nav time: {:.2f}, total reward: {:.4f},'
-                     ' average return: {:.4f}, avg social violation: {:.2f}, avg personal violation: {:.2f}, avg jerk cost: {:.2f},'
-                     ' avg aggregated time: {:.2f}, maximum speed: {:.2f}, left %: {:.2f}, right %: {:.2f}'. format(phase.upper(), extra_info, success_rate, collision_rate,
-                                                       avg_nav_time, average(cumulative_rewards),
-                                                       average(average_returns), avg_social_violation_cnt, avg_personal_violation_cnt,
-                                                       avg_jerk_cost, avg_aggregated_time, avg_max_speed, left_percentage, right_percentage))
+        logging.info(
+            f'{phase.upper():<5} {extra_info}has '
+            f'success rate: {success_rate:.2f}, '
+            f'collision rate: {collision_rate:.2f}, '
+            f'nav time: {avg_nav_time:.2f}, '
+            f'total reward: {mean(cumulative_rewards):.4f}, '
+            f'average return: {mean(average_returns):.4f}, '
+            f'social violation: {mean(social_violation_cnt["global"]):.2f}+-{std(social_violation_cnt["global"]):.2f}, '
+            f'personal violation: {mean(personal_violation_cnt["global"]):.2f}+-{std(personal_violation_cnt["global"]):.2f}, '
+            f'jerk cost: {mean(jerk_cost["global"]):.2f}+-{std(jerk_cost["global"]):.2f}, '
+            f'aggregated time: {mean(aggregated_time["global"]):.2f}+-{std(aggregated_time["global"]):.2f}, '
+            f'speed: {mean(avg_speed["global"]):.2f}+-{std(avg_speed["global"]):.2f}, '
+            f'speed violation: {mean(speed_violation["global"]):.2f}+-{std(speed_violation["global"]):.2f}, '
+            f'left %: {left_percentage:.2f}, '
+            f'right %: {right_percentage:.2f}')
+            
+
         if phase in ['val', 'test']:
             total_time = sum(success_times + collision_times + timeout_times)
             logging.info('Frequency of being in danger: %.2f and average min separate distance in danger: %.2f',
-                         discomfort / total_time, average(min_dist))
+                         discomfort / total_time, mean(min_dist))
 
         if print_failure:
             logging.info('Collision cases: ' + ' '.join([str(x) for x in collision_cases]))
             logging.info('Timeout cases: ' + ' '.join([str(x) for x in timeout_cases]))
 
-        self.statistics = success_rate, collision_rate, avg_nav_time, average(cumulative_rewards), average(average_returns), global_max_speed, global_social_violation_cnt, global_personal_violation_cnt, global_jerk_cost, global_aggregated_time
+        self.statistics = {
+            'success rate': success_rate,
+            'collision rate': collision_rate,
+            'avg nav time': avg_nav_time,
+            'avg cumulative rewards': mean(cumulative_rewards),
+            'avg returns': mean(average_returns),
+            'avg speed': avg_speed['global'],
+            'speed violation': speed_violation['global'],
+            'social violation': social_violation_cnt['global'],
+            'personal violation': personal_violation_cnt['global'],
+            'jerk cost': jerk_cost['global'],
+            'aggregated time': aggregated_time['global'],
+            'side preference': side_preference['global']}
 
         return self.statistics
 
@@ -189,16 +210,9 @@ class Explorer(object):
                 self.memory.push((state, value, reward, next_state))
 
     def log(self, tag_prefix, global_step):
-        sr, cr, time, reward, avg_return, _, _, _, _, _ = self.statistics
-        self.writer.add_scalar(tag_prefix + '/success_rate', sr, global_step)
-        self.writer.add_scalar(tag_prefix + '/collision_rate', cr, global_step)
-        self.writer.add_scalar(tag_prefix + '/time', time, global_step)
-        self.writer.add_scalar(tag_prefix + '/reward', reward, global_step)
-        self.writer.add_scalar(tag_prefix + '/avg_return', avg_return, global_step)
+        self.writer.add_scalar(tag_prefix + '/success_rate', self.statistics['success rate'], global_step)
+        self.writer.add_scalar(tag_prefix + '/collision_rate', self.statistics['collision rate'], global_step)
+        self.writer.add_scalar(tag_prefix + '/time', self.statistics['avg nav time'], global_step)
+        self.writer.add_scalar(tag_prefix + '/reward', self.statistics['avg cumulative rewards'], global_step)
+        self.writer.add_scalar(tag_prefix + '/avg_return', self.statistics['avg returns'], global_step)
 
-
-def average(input_list):
-    if input_list:
-        return sum(input_list) / len(input_list)
-    else:
-        return 0
