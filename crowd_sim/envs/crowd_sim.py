@@ -463,7 +463,7 @@ class CrowdSim(gym.Env):
             h = self.humans[0]
             # If agent's y position is within the y range occupied by the other human (they are on the same vertical position)
             if (h.py - h.radius) <= end_position[1] <= (h.py + h.radius): 
-                if h.px < end_position[0]:
+                if end_position[0] < h.px:
                     side_preference = 0
                 else:
                     side_preference = 1
@@ -634,10 +634,10 @@ class CrowdSim(gym.Env):
             ax.set_ylim(-11, 11)
             ax.set_xlabel('x(m)', fontsize=14)
             ax.set_ylabel('y(m)', fontsize=14)
-            show_human_start_goal = False
+            show_human_start_goal = True
             show_sensor_range = True
-            show_eval_info = False
-            show_social_zone = False
+            show_eval_info = True
+            show_social_zone = True
 
             # add human start positions and goals
             human_colors = [cmap(i) for i in range(len(self.humans))]
