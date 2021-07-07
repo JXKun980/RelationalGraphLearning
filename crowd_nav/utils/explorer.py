@@ -133,8 +133,8 @@ class Explorer(object):
         collision_rate = collision / k
         assert success + collision + timeout == k
         avg_nav_time = sum(success_times) / len(success_times) if success_times else self.env.time_limit
-        left_percentage = side_preference['global'].count(0) / len(side_preference['global'])
-        right_percentage = side_preference['global'].count(1) / len(side_preference['global'])
+        left_percentage = side_preference['global'].count(0) / len(side_preference['global']) if len(side_preference['global']) > 0 else 0
+        right_percentage = side_preference['global'].count(1) / len(side_preference['global']) if len(side_preference['global']) > 0 else 0
 
 
         extra_info = '' if episode is None else 'in episode {} '.format(episode)
