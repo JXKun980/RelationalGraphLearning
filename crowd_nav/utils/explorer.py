@@ -96,10 +96,10 @@ class Explorer(object):
 
                 # Update logged info to global if episode succeeds
                 avg_speed['global'].append(avg_speed['episodic'])
-                speed_violation['global'].append(speed_violation['episodic'])
-                social_violation_cnt['global'].append(social_violation_cnt['episodic'])
-                personal_violation_cnt['global'].append(personal_violation_cnt['episodic'])
-                jerk_cost['global'].append(jerk_cost['episodic'])
+                speed_violation['global'].append(speed_violation['episodic'] / self.env.global_time)
+                social_violation_cnt['global'].append(social_violation_cnt['episodic'] / self.env.global_time)
+                personal_violation_cnt['global'].append(personal_violation_cnt['episodic'] / self.env.global_time)
+                jerk_cost['global'].append(jerk_cost['episodic'] / self.env.global_time)
                 aggregated_time['global'].append(aggregated_time['episodic'])
                 side_preference['global'].append(side_preference['episodic'])
             elif isinstance(step_info['event'], Collision):
@@ -135,6 +135,7 @@ class Explorer(object):
         avg_nav_time = sum(success_times) / len(success_times) if success_times else self.env.time_limit
         left_percentage = side_preference['global'].count(0) / len(side_preference['global'])
         right_percentage = side_preference['global'].count(1) / len(side_preference['global'])
+
 
         extra_info = '' if episode is None else 'in episode {} '.format(episode)
         extra_info = extra_info + '' if epoch is None else extra_info + ' in epoch {} '.format(epoch)

@@ -462,7 +462,7 @@ class CrowdSim(gym.Env):
         if self.test_scenario in self.all_two_agent_scenarios:
             h = self.humans[0]
             # If agent's y position is within the y range occupied by the other human (they are on the same vertical position)
-            if (h.py - h.radius) <= end_position[1] <= (h.py + h.radius): 
+            if ((h.py - h.radius) <= end_position[1] <= (h.py + h.radius)) and (h.): 
                 if end_position[0] < h.px:
                     side_preference = 0
                 else:

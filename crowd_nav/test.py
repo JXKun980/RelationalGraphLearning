@@ -157,17 +157,16 @@ def main(args):
             with open(os.path.join(args.model_dir, args.output_data_file_name), 'w') as f:
                 f.write(
                     f'{"avg speed":^10} {"speed violation":^20} {"social violation":^20} {"personal violation":^20}'
-                    f'{"jerk cost":^10} {"aggregated time":^20} {"side preference":^10}\n'
+                    f'{"jerk cost":^10} {"aggregated time":^20} \n'
                 )
-                for i, _ in enumerate(statistics['avg speed']):
+                for i, b in enumerate(statistics['avg speed']):
                     f.write(
                         f'{statistics["avg speed"][i]:^10.3}'
                         f'{statistics["speed violation"][i]:^20}'
                         f'{statistics["social violation"][i]:^20}'
                         f'{statistics["personal violation"][i]:^20}'
                         f'{statistics["jerk cost"][i]:^10.3}'
-                        f'{statistics["aggregated time"][i]:^20}'
-                        f'{statistics["side preference"][i]:^20} \n'
+                        f'{statistics["aggregated time"][i]:^20} \n'
                     )
             logging.info(f'Results has been written in {args.output_data_file_name}')
 
