@@ -199,9 +199,8 @@ class CrowdSim(gym.Env):
 
             min_x = - (self.robot.radius + human.radius)
             max_x = self.robot.radius + human.radius
-            max_num_cases = 20
 
-            human_x = case_counter % max_num_cases * (max_x - min_x) / max_num_cases + min_x
+            human_x = (max_x - min_x) * np.random.random() + min_x
 
             human.set(human_x, self.circle_radius, human_x, -self.circle_radius, 0, 0, 0)
             self.humans = [human]
@@ -216,9 +215,8 @@ class CrowdSim(gym.Env):
 
             min_x = - (self.robot.radius + human.radius)
             max_x = self.robot.radius + human.radius
-            max_num_cases = 20
 
-            human_x = case_counter % max_num_cases * (max_x - min_x) / max_num_cases + min_x
+            human_x = (max_x - min_x) * np.random.random() + min_x
 
             human.set(human_x, -self.circle_radius+2, human_x, self.circle_radius+2, 0, 0, 0)
             self.humans = [human]
@@ -232,9 +230,9 @@ class CrowdSim(gym.Env):
 
             min_x = -(self.circle_radius + self.robot.radius + human.radius)
             max_x = -(self.circle_radius - self.robot.radius - human.radius)
-            max_num_cases = 20
 
-            human_x = case_counter % max_num_cases * (max_x - min_x) / max_num_cases + min_x
+
+            human_x = (max_x - min_x) * np.random.random() + min_x
 
             human.set(human_x, 0, -human_x, 0, 0, 0, 0)
             self.humans = [human]
